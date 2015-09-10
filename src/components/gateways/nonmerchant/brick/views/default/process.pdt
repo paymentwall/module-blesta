@@ -1,0 +1,72 @@
+<script src="https://api.paymentwall.com/brick/brick.1.3.js"></script>
+<div id="payment-form-container">
+    <div class="brick-wrapper ">
+        <div class="brick-header">
+            <div class="brick-merchant-name"><?php echo $data['merchant'] ?></div>
+            <div class="brick-product-name"><?php echo $data['product_name'] ?></div>
+        </div>
+        <form id="brick-payment-form" action="<?php echo $post_to ?>" method="post" class="brick-form">
+            <div class="brick-iw-cc">
+                <input id="brick-card-number" class="brick-card-number brick-input-l" data-brick="card-number"
+                       type="text" name="brick[card_number]" placeholder="Card Number">
+            </div>
+            <div class="brick-iw-exp">
+                <input id="brick-card-expiration" class="brick-card-expiration brick-input-s"
+                       data-brick="card-expiration" type="text" placeholder="MM/YY">
+            </div>
+            <div class="brick-iw-cvv">
+                <input id="brick-card-cvv" name="brick[card_cvv]" class="brick-card-cvv brick-input-s"
+                       data-brick="card-cvv" type="text" placeholder="CVV">
+                <div class="brick-cvv-icon brick-icon-info"></div>
+                <div class="brick-cvv-icon brick-icon-info-close"></div>
+                <div class="brick-info-cont">The Card Verification Code, or CVV is an <span>extra code</span> printed on
+                    your debit or credit card
+                </div>
+            </div>
+            <button type="submit" class="brick-submit">
+                <span
+                    class="brick-submit-text"><?php echo $this->_('Brick.pay_button', false, $data['amount'], $data['currency']); ?></span>
+            </button>
+            <input type="hidden" id="brick-exp-month" name="brick[exp_month]"/>
+            <input type="hidden" id="brick-exp-year" name="brick[exp_year]"/>
+            <input type="hidden" id="brick-token" name="brick[token]"/>
+            <input type="hidden" id="brick-fingerprint" name="brick[fingerprint]"/>
+        </form>
+    </div>
+    <link rel="stylesheet" href="https://api.paymentwall.com/brick/templates/brick.css" type="text/css">
+</div>
+</div>
+<script>
+    var $form = $('#brick-payment-form');
+    var brick = new Brick({
+        public_key: '<?php echo $data['public_key']?>',
+        form: {formatter: true}
+    }, 'custom');
+
+    $form.submit(function (e) {
+        e.preventDefault();
+
+        if ($('#brick-card-expiration').val()) {
+            var tmp = $('#brick-card-expiration').val().split('/');
+            $('#brick-exp-month').val(tmp[0] !== undefined ? tmp[0].trim() : '');
+            $('#brick-exp-year').val(tmp[1] !== undefined ? tmp[1].trim() : '');
+        }
+
+        brick.tokenizeCard({
+            card_number: $('#brick-card-number').val(),
+            card_expiration_month: $('#brick-exp-month').val(),
+            card_expiration_year: $('#brick-exp-year').val(),
+            card_cvv: $('#brick-card-cvv').val()
+        }, function (response) {
+            if (response.type == 'Error') {
+                alert("Brick error(s): \n - " + response.error.join("\n - "));
+            } else {
+                $('#brick-token').val(response.token);
+                $('#brick-fingerprint').val(Brick.getFingerprint());
+                $form.get(0).submit();
+            }
+        });
+
+        return false;
+    });
+</script>

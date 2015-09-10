@@ -1,0 +1,42 @@
+<ul>
+    <li>
+        <?php
+        $this->Form->label($this->_("Brick.merchant_name", true), "merchant_name");
+        $this->Form->fieldText("merchant_name", $this->Html->ifSet($meta['merchant_name']), array('id' => "merchant_name"));
+        ?>
+    </li>
+    <li>
+        <?php
+        $this->Form->label($this->_("Brick.public_key", true), "public_key");
+        $this->Form->fieldText("public_key", $this->Html->ifSet($meta['public_key']), array('id' => "public_key"));
+        ?>
+        <span class="tooltip"><?php $this->_("AppController.tooltip.text"); ?>
+            <div><?php $this->_("Brick.public_key_note"); ?></div></span>
+    </li>
+    <li>
+        <?php
+        $this->Form->label($this->_("Brick.private_key", true), "private_key");
+        $this->Form->fieldText("private_key", $this->Html->ifSet($meta['private_key']), array('id' => "private_key"));
+        ?>
+        <span class="tooltip"><?php $this->_("AppController.tooltip.text"); ?>
+            <div><?php $this->_("Brick.private_key_note"); ?></div></span>
+    </li>
+    <li>
+        <?php
+        $this->Form->label($this->_("Brick.public_test_key", true), "public_test_key");
+        $this->Form->fieldText("public_test_key", $this->Html->ifSet($meta['public_test_key']), array('id' => "public_test_key"));
+        ?>
+    </li>
+    <li>
+        <?php
+        $this->Form->label($this->_("Brick.private_test_key", true), "private_test_key");
+        $this->Form->fieldText("private_test_key", $this->Html->ifSet($meta['private_test_key']), array('id' => "private_test_key"));
+        ?>
+    </li>
+    <li>
+        <?php
+        $this->Form->fieldCheckbox("test_mode", "true", ($this->Html->ifSet($meta['test_mode'], "false") == "true"), array('id' => "test_mode"));
+        $this->Form->label($this->_("Brick.test_mode", true), "test_mode", array('class' => "inline"));
+        ?>
+    </li>
+</ul>

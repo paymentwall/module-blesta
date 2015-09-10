@@ -1,0 +1,40 @@
+<ul>
+    <li>
+        <?php
+        $this->Form->label($this->_("Paymentwall.project_key", true), "project_key");
+        $this->Form->fieldText("project_key", $this->Html->ifSet($meta['project_key']), array('id' => "project_key"));
+        ?>
+        <span class="tooltip"><?php $this->_("AppController.tooltip.text"); ?>
+            <div><?php $this->_("Paymentwall.project_key_note"); ?></div></span>
+    </li>
+    <li>
+        <?php
+        $this->Form->label($this->_("Paymentwall.secret_key", true), "secret_key");
+        $this->Form->fieldText("secret_key", $this->Html->ifSet($meta['secret_key']), array('id' => "secret_key"));
+        ?>
+        <span class="tooltip"><?php $this->_("AppController.tooltip.text"); ?>
+            <div><?php $this->_("Paymentwall.secret_key_note"); ?></div></span>
+    </li>
+    <li>
+        <?php
+        $this->Form->label($this->_("Paymentwall.widget_code", true), "widget_code");
+        $this->Form->fieldText("widget_code", $this->Html->ifSet($meta['widget_code']), array('id' => "widget_code"));
+        ?>
+        <span class="tooltip"><?php $this->_("AppController.tooltip.text"); ?>
+            <div><?php $this->_("Paymentwall.widget_code_note"); ?></div></span>
+    </li>
+    <?php /*
+    <li>
+        <?php
+        $this->Form->fieldCheckbox("enable_delivery", "true", ($this->Html->ifSet($meta['enable_delivery'], "false") == "true"), array('id' => "enable_delivery"));
+        $this->Form->label($this->_("Paymentwall.enable_delivery", true), "enable_delivery", array('class' => "inline"));
+        ?>
+    </li> 
+    */ ?>
+    <li>
+        <?php
+        $this->Form->fieldCheckbox("test_mode", "true", ($this->Html->ifSet($meta['test_mode'], "false") == "true"), array('id' => "test_mode"));
+        $this->Form->label($this->_("Paymentwall.test_mode", true), "test_mode", array('class' => "inline"));
+        ?>
+    </li>
+</ul>

@@ -1,0 +1,6 @@
+<div class="paymentwall-widget">
+    <a href="<?php echo $widget->getUrl(); ?>" title="<?php echo $this->_('Paymentwall.pay_button'); ?>">
+        <img src="<?php echo $this->view_dir; ?>images/paymentwall_button.png"
+             alt="<?php echo $this->_('Paymentwall.pay_button'); ?>"/>
+    </a>
+</div>
