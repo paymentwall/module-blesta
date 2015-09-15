@@ -7,7 +7,7 @@ Paymentwall module for Blesta.
 * PHP 5.3 or later
 
 #Installation
-To install Paymentwall Blesta module, please follow the [instructions](https://www.paymentwall.com/).
+To install Paymentwall Blesta module, please follow the [instructions](https://www.paymentwall.com/en/documentation/Blesta/3439).
 
 After cloning the repository don't forget to install Paymentwall PHP API library (**required**):
 `git submodule init` and then `git submodule update`
