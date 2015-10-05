@@ -23,14 +23,6 @@
         <span class="tooltip"><?php $this->_("AppController.tooltip.text"); ?>
             <div><?php $this->_("Paymentwall.widget_code_note"); ?></div></span>
     </li>
-    <?php /*
-    <li>
-        <?php
-        $this->Form->fieldCheckbox("enable_delivery", "true", ($this->Html->ifSet($meta['enable_delivery'], "false") == "true"), array('id' => "enable_delivery"));
-        $this->Form->label($this->_("Paymentwall.enable_delivery", true), "enable_delivery", array('class' => "inline"));
-        ?>
-    </li> 
-    */ ?>
     <li>
         <?php
         $this->Form->fieldCheckbox("test_mode", "true", ($this->Html->ifSet($meta['test_mode'], "false") == "true"), array('id' => "test_mode"));
