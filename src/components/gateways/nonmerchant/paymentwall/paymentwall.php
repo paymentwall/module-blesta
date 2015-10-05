@@ -159,12 +159,6 @@ class Paymentwall extends NonmerchantGateway
                     'post_format' => 'trim'
                 )
             ),
-            'enable_delivery' => array(
-                'valid' => array(
-                    'rule' => array("in_array", array('true', 'false')),
-                    'message' => Language::_("Paymentwall.!error.enable_delivery.valid", true)
-                )
-            ),
             'test_mode' => array(
                 'valid' => array(
                     'rule' => array("in_array", array('true', 'false')),
