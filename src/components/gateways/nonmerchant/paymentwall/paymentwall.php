@@ -1,6 +1,6 @@
 <?php
 
-if(!class_exists('Paymentwall_Config'))
+if (!class_exists('Paymentwall_Config'))
     include(getcwd() . '/components/Gateways/lib/paymentwall-php/lib/paymentwall.php');
 
 /**
@@ -13,6 +13,8 @@ class Paymentwall extends NonmerchantGateway
 {
     const PW_PAYMENT_CREDIT = "credit";
     const PW_PAYMENT_NORMAL = "normal";
+
+    private $gwId;
 
     /**
      * @var string The version of this gateway
@@ -167,6 +169,10 @@ class Paymentwall extends NonmerchantGateway
             ),
         );
 
+        // Set checkbox if not set
+        if (!isset($meta['test_mode']))
+            $meta['test_mode'] = "false";
+
         $this->Input->setRules($rules);
 
         // Validate the given meta data to ensure it meets the requirements
@@ -259,7 +265,7 @@ class Paymentwall extends NonmerchantGateway
             $this->meta['widget_code'],
             array(
                 new Paymentwall_Product(
-                    $this->generateProductId($invoice_amounts, $contact, $amount),
+                    $this->generateProductId($invoice_amounts, $contact, $amount, $this->getCurrentGatewayId(), Configure::get("Blesta.company_id")),
                     $amount,
                     $this->currency,
                     $options['description']
@@ -270,8 +276,9 @@ class Paymentwall extends NonmerchantGateway
                     'email' => $contact->email,
                     'integration_module' => 'blesta',
                     'success_url' => $options['return_url'],
-                    'test_mode' => $this->meta['test_mode'] ? 1 : 0,
-                    'invoice' => $this->serializeInvoices($invoice_amounts)
+                    'test_mode' => $this->meta['test_mode'] == 'true' ? 1 : 0,
+                    'invoice' => $this->serializeInvoices($invoice_amounts),
+                    'callback_url' => Configure::get("Blesta.gw_callback_url") . Configure::get("Blesta.company_id") . '/paymentwall',
                 ),
                 $this->prepareUserProfileData($contact)
             )
@@ -288,15 +295,19 @@ class Paymentwall extends NonmerchantGateway
      * @param $invoice_amounts
      * @param $contact
      * @param $amount
+     * @param $gateway_id
+     * @param $company_id
      * @return string
      */
-    private function generateProductId($invoice_amounts, $contact, $amount)
+    private function generateProductId($invoice_amounts, $contact, $amount, $gateway_id, $company_id)
     {
         return implode('|', array(
             empty($invoice_amounts) ? self::PW_PAYMENT_CREDIT : self::PW_PAYMENT_NORMAL,
             $contact->client_id,
             $amount,
-            $this->currency
+            $this->currency,
+            $gateway_id,
+            $company_id
         ));
     }
 
@@ -340,10 +351,6 @@ class Paymentwall extends NonmerchantGateway
      */
     public function validate(array $get, array $post)
     {
-        if ($get[0] != 'paymentwall') {
-            return false;
-        }
-
         $status = "error";
         $amount = 0;
         $currency = '';
@@ -351,16 +358,14 @@ class Paymentwall extends NonmerchantGateway
         $this->initPaymentwallConfigs();
         $pingback = new Paymentwall_Pingback($_GET, $_SERVER['REMOTE_ADDR']);
 
-        list($type, $client_id, $amount, $currency) = explode('|', $pingback->getProductId());
+        list($type, $client_id, $amount, $currency, $gateway_id, $company_id) = explode('|', $pingback->getProductId());
         if (!$amount OR !$currency) {
             $this->Input->setErrors($this->getCommonError("invalid"));
         }
 
         if ($pingback->validate()) {
-
-            $status = 'approved';
             if ($pingback->isDeliverable()) {
-
+                $status = 'approved';
             } elseif ($pingback->isCancelable()) {
                 $status = 'declined';
             }
@@ -372,7 +377,9 @@ class Paymentwall extends NonmerchantGateway
         // Log the response
         $this->log($this->ifSet($_SERVER['REQUEST_URI']), serialize($get), "output", true);
 
-        return array(
+        // Clone function processNotification in class GatewayPayments
+        // Process transaction after validate
+        $this->processTransaction(array(
             'client_id' => $pingback->getUserId(),
             'amount' => $amount,
             'currency' => $currency,
@@ -380,8 +387,10 @@ class Paymentwall extends NonmerchantGateway
             'reference_id' => null,
             'transaction_id' => $pingback->getReferenceId(),
             'parent_transaction_id' => null,
-            'invoices' => $this->unserializeInvoices($pingback->getParameter('invoice')) // optional
-        );
+            'invoices' => $this->unserializeInvoices($pingback->getParameter('invoice')), // optional
+            'gateway_id' => $gateway_id,
+            'company_id' => $company_id
+        ));
     }
 
     /**
@@ -467,11 +476,126 @@ class Paymentwall extends NonmerchantGateway
     private function unserializeInvoices($str)
     {
         $invoices = array();
-        $temp = explode("|", $str);
-        foreach ($temp as $pair) {
-            list($id, $amount) = explode("=", $pair, 2);
-            $invoices[] = array('id' => $id, 'amount' => $amount);
+        if ($str) {
+            $temp = explode("|", $str);
+            foreach ($temp as $pair) {
+                list($id, $amount) = explode("=", $pair, 2);
+                $invoices[] = array('id' => $id, 'amount' => $amount);
+            }
         }
         return $invoices;
+    }
+
+    /**
+     * @return mixed|null
+     */
+    protected function getCurrentGatewayId()
+    {
+        if (!$this->gwId) {
+            $r = new Record();
+            $row = $r->select("id")->from("gateways")
+                ->where("class", "=", 'paymentwall')
+                ->where("company_id", "=", Configure::get("Blesta.company_id"))->fetch(PDO::FETCH_ASSOC);
+            $this->gwId = $row ? reset($row) : null;
+        }
+
+        return $this->gwId;
+    }
+
+    /**
+     * @param $id
+     */
+    protected function setCurrentGatewayId($id)
+    {
+        $this->gwId = $id;
+    }
+
+    /**
+     * @param $response
+     */
+    private function processTransaction($response)
+    {
+        $transaction_id = '';
+        // If a response was given, record the transaction
+        if (is_array($response)) {
+
+            Loader::loadModels($this, array('Transactions', 'Clients', 'Companies', 'Emails'));
+            Loader::loadHelpers($this, array('Date', 'CurrencyFormat'));
+
+            $trans_data = array(
+                'client_id' => $response['client_id'],
+                'amount' => $response['amount'],
+                'currency' => $response['currency'],
+                'type' => "other",
+                'gateway_id' => $response['gateway_id'],
+                'transaction_id' => isset($response['transaction_id']) ? $response['transaction_id'] : null,
+                'reference_id' => isset($response['reference_id']) ? $response['reference_id'] : null,
+                'parent_transaction_id' => isset($response['parent_transaction_id']) ? $response['parent_transaction_id'] : null,
+                'status' => $response['status']
+            );
+
+
+            // If the transaction exists, update it
+            if ($trans_data['transaction_id'] && $transaction = $this->Transactions->getByTransactionId($trans_data['transaction_id'], null, $response['gateway_id'])) {
+                // Don't update client_id to prevent transaction from being reassigned
+                unset($trans_data['client_id']);
+
+                $this->Transactions->edit($transaction->id, $trans_data);
+                $transaction_id = $transaction->id;
+            } // Add the transaction
+            else {
+                $transaction_id = $this->Transactions->add($trans_data);
+            }
+        } // If no response given and errors set, pass those errors along
+        elseif (($errors = $this->errors())) {
+            $this->Input->setErrors($errors);
+            die('Transaction invalid!');
+        }
+
+        // Set any errors with adding the transaction
+        if (($errors = $this->Transactions->errors())) {
+            $this->Input->setErrors($errors);
+            die('Cannot process transaction #' . $transaction_id);
+        } else {
+
+            // Apply the transaction to the invoices given (if any)
+            if (isset($response['invoices']) && is_array($response['invoices'])) {
+                // Format invoices into something suitable for Transactions::apply()
+                foreach ($response['invoices'] as &$invoice) {
+                    $invoice['invoice_id'] = $invoice['id'];
+                    unset($invoice['id']);
+                }
+
+                if (!empty($response['invoices']) && $response['status'] == "approved")
+                    $this->Transactions->apply($transaction_id, array('amounts' => $response['invoices']));
+            }
+
+            $transaction = $this->Transactions->get($transaction_id);
+
+            // Send an email regarding the non-merchant payment received
+            if (isset($response['status']) && isset($response['client_id']) &&
+                $response['status'] == "approved" && $transaction &&
+                ($client = $this->Clients->get($response['client_id']))
+            ) {
+
+                // Set date helper info
+                $this->Date->setTimezone("UTC", Configure::get("Blesta.company_timezone"));
+                $this->Date->setFormats(array(
+                    'date_time' => $this->Companies->getSetting($response['company_id'], "datetime_format")->value
+                ));
+
+                $amount = $this->CurrencyFormat->format($transaction->amount, $transaction->currency);
+
+                $tags = array(
+                    'contact' => $client,
+                    'transaction' => $transaction,
+                    'date_added' => $this->Date->cast($transaction->date_added, "date_time")
+                );
+
+                $this->Emails->send("payment_nonmerchant_approved", $response['company_id'], $client->settings['language'], $client->email, $tags, null, null, null, array('to_client_id' => $client->id));
+            }
+
+            die('OK');
+        }
     }
 }
