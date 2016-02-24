@@ -1,7 +1,7 @@
 <?php
 
 if (!class_exists('Paymentwall_Config'))
-    include(getcwd() . '/components/Gateways/lib/paymentwall-php/lib/paymentwall.php');
+    include(getcwd() . '/components/gateways/lib/paymentwall-php/lib/paymentwall.php');
 
 /**
  * Paymentwall
