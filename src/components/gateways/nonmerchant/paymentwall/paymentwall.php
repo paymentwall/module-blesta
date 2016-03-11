@@ -278,7 +278,7 @@ class Paymentwall extends NonmerchantGateway
                     'success_url' => $options['return_url'],
                     'test_mode' => $this->meta['test_mode'] == 'true' ? 1 : 0,
                     'invoice' => $this->serializeInvoices($invoice_amounts),
-                    'callback_url' => Configure::get("Blesta.gw_callback_url") . Configure::get("Blesta.company_id") . '/paymentwall',
+                    'pingback_url' => Configure::get("Blesta.gw_callback_url") . Configure::get("Blesta.company_id") . '/paymentwall',
                 ),
                 $this->prepareUserProfileData($contact)
             )
